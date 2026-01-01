@@ -87,6 +87,7 @@ body.dark-mode .card h3,body.dark-mode .card p,body.dark-mode .footer,body.dark-
 </div>
 
 <script>
+// Chart Setup
 const data={labels:[],datasets:[
 {label:'Voltage (V)',data:[],borderColor:'#FF4C4C',backgroundColor:'rgba(255,76,76,0.1)',fill:true,tension:0.3},
 {label:'Current (A)',data:[],borderColor:'#4C6EFF',backgroundColor:'rgba(76,110,255,0.1)',fill:true,tension:0.3},
@@ -94,59 +95,60 @@ const data={labels:[],datasets:[
 {label:'Energy (MWh)',data:[],borderColor:'#FF9F43',backgroundColor:'rgba(255,159,67,0.1)',fill:true,tension:0.3}
 ]};
 const ctx=document.getElementById('chart').getContext('2d');
-function createChart(dark=false){return new Chart(ctx,{type:'line',data:data,options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{font:{size:14},color:dark?'#fff':'#111'}}},scales:{x:{title:{display:true,text:'Time',font:{size:14,color:dark?'#fff':'#111'}},ticks:{color:dark?'#fff':'#111'}},y:{beginAtZero:true,title:{display:true,text:'Values',font:{size:14,color:dark?'#fff':'#111'}},ticks:{color:dark?'#fff':'#111'}}}}});}
 let darkMode=document.body.classList.contains('dark-mode');
-let chart=createChart(darkMode);
-document.getElementById('mode-toggle').addEventListener('click',()=>{document.body.classList.toggle('dark-mode');darkMode=document.body.classList.contains('dark-mode');chart.destroy();chart=createChart(darkMode);document.getElementById('mode-toggle').innerText=darkMode?'☀️ Light Mode':'🌙 Dark Mode';});
+let chart=new Chart(ctx,{type:'line',data:data,options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{font:{size:14},color:darkMode?'#fff':'#111'}}},scales:{x:{title:{display:true,text:'Time',font:{size:14,color:darkMode?'#fff':'#111'}},ticks:{color:darkMode?'#fff':'#111'}},y:{beginAtZero:true,title:{display:true,text:'Values',font:{size:14,color:darkMode?'#fff':'#111'}},ticks:{color:darkMode?'#fff':'#111'}}}}});
 
-const socket=new WebSocket('ws://'+window.location.hostname+'/ws');
-socket.onmessage=function(event){
-  const obj=JSON.parse(event.data);
-  const t=new Date().toLocaleTimeString();
-  
-  // Update Main Cards
-  document.getElementById('voltage').innerText=obj.voltage?.toFixed(2) ?? "--";
-  document.getElementById('current').innerText=obj.current?.toFixed(2) ?? "--";
-  document.getElementById('power').innerText=obj.power?.toFixed(3) ?? "--";
-  document.getElementById('energy').innerText=obj.energy?.toFixed(4) ?? "--";
+// Dark Mode Toggle
+document.getElementById('mode-toggle').addEventListener('click',()=>{
+  document.body.classList.toggle('dark-mode');
+  darkMode=document.body.classList.contains('dark-mode');
+  chart.destroy();
+  chart=new Chart(ctx,{type:'line',data:data,options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{font:{size:14},color:darkMode?'#fff':'#111'}}},scales:{x:{title:{display:true,text:'Time',font:{size:14,color:darkMode?'#fff':'#111'}},ticks:{color:darkMode?'#fff':'#111'}},y:{beginAtZero:true,title:{display:true,text:'Values',font:{size:14,color:darkMode?'#fff':'#111'}},ticks:{color:darkMode?'#fff':'#111'}}}}});
+  document.getElementById('mode-toggle').innerText=darkMode?'☀️ Light Mode':'🌙 Dark Mode';
+});
 
-  data.labels.push(t);
-  data.datasets[0].data.push(obj.voltage);
-  data.datasets[1].data.push(obj.current);
-  data.datasets[2].data.push(obj.power);
-  data.datasets[3].data.push(obj.energy);
-  if(data.labels.length>25){data.labels.shift();data.datasets.forEach(ds=>ds.data.shift());}
-  chart.update();
+// Firebase Fetch
+const firebaseURL = "https://solar-power-generation-652f1-default-rtdb.firebaseio.com/live.json";
 
-  // Update Voltage Modal (PM5300 Registers)
-  document.getElementById('v_l1l2').innerText=obj.v_l1l2?.toFixed(2) ?? "--";
-  document.getElementById('v_l2l3').innerText=obj.v_l2l3?.toFixed(2) ?? "--";
-  document.getElementById('v_l3l1').innerText=obj.v_l3l1?.toFixed(2) ?? "--";
-  document.getElementById('v_l1n').innerText=obj.v_l1n?.toFixed(2) ?? "--";
-  document.getElementById('v_l2n').innerText=obj.v_l2n?.toFixed(2) ?? "--";
-  document.getElementById('v_l3n').innerText=obj.v_l3n?.toFixed(2) ?? "--";
+async function fetchData(){
+  try{
+    const res = await fetch(firebaseURL);
+    const obj = await res.json();
 
-  // Update Current Modal (PM5300 Registers)
-  document.getElementById('i1').innerText=obj.i1?.toFixed(2) ?? "--";
-  document.getElementById('i2').innerText=obj.i2?.toFixed(2) ?? "--";
-  document.getElementById('i3').innerText=obj.i3?.toFixed(2) ?? "--";
-  document.getElementById('in').innerText=obj.in?.toFixed(2) ?? "--";
-};
+    // Update Cards
+    document.getElementById('voltage').innerText=obj.voltage?.toFixed(2) ?? "--";
+    document.getElementById('current').innerText=obj.current?.toFixed(2) ?? "--";
+    document.getElementById('power').innerText=obj.power_kw?.toFixed(3) ?? "--";
+    document.getElementById('energy').innerText=obj.energy_mwh?.toFixed(4) ?? "--";
 
-// Modal Logic
-const voltageCard=document.getElementById('voltageCard');
-const voltageModal=document.getElementById('voltageModal');
-const closeVoltage=document.getElementById('closeVoltageModal');
-voltageCard.onclick=()=>{voltageModal.style.display='block';}
-closeVoltage.onclick=()=>{voltageModal.style.display='none';}
-window.onclick=function(e){if(e.target==voltageModal){voltageModal.style.display='none';}}
+    // Chart
+    const t = new Date().toLocaleTimeString();
+    data.labels.push(t);
+    data.datasets[0].data.push(obj.voltage);
+    data.datasets[1].data.push(obj.current);
+    data.datasets[2].data.push(obj.power_kw);
+    data.datasets[3].data.push(obj.energy_mwh);
+    if(data.labels.length>25){data.labels.shift();data.datasets.forEach(ds=>ds.data.shift());}
+    chart.update();
 
-const currentCard=document.getElementById('currentCard');
-const currentModal=document.getElementById('currentModal');
-const closeCurrent=document.getElementById('closeCurrentModal');
-currentCard.onclick=()=>{currentModal.style.display='block';}
-closeCurrent.onclick=()=>{currentModal.style.display='none';}
-window.onclick=function(e){if(e.target==currentModal){currentModal.style.display='none';}}
+    // Modals
+    document.getElementById('v_l1l2').innerText=obj.v_l1l2?.toFixed(2)??"--";
+    document.getElementById('v_l2l3').innerText=obj.v_l2l3?.toFixed(2)??"--";
+    document.getElementById('v_l3l1').innerText=obj.v_l3l1?.toFixed(2)??"--";
+    document.getElementById('v_l1n').innerText=obj.v_l1n?.toFixed(2)??"--";
+    document.getElementById('v_l2n').innerText=obj.v_l2n?.toFixed(2)??"--";
+    document.getElementById('v_l3n').innerText=obj.v_l3n?.toFixed(2)??"--";
+    document.getElementById('i1').innerText=obj.i1?.toFixed(2)??"--";
+    document.getElementById('i2').innerText=obj.i2?.toFixed(2)??"--";
+    document.getElementById('i3').innerText=obj.i3?.toFixed(2)??"--";
+    document.getElementById('in').innerText=obj.in?.toFixed(2)??"--";
+
+  }catch(err){console.error("❌ Firebase fetch error:", err);}
+}
+
+// Fetch every 3 seconds
+setInterval(fetchData,3000);
+fetchData();
 </script>
 </body>
 </html>
