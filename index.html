@@ -1,40 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="bn">
 <head>
-  <title>SSG Solar Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { background:#0f172a; color:white; font-family:Arial; text-align:center; }
-    h1 { color:#22c55e; }
-    .box { background:#1e293b; margin:10px; padding:15px; border-radius:10px; }
-    .value { font-size:28px; color:#38bdf8; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSG Solar Power</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+:root {
+  --bg-color: #f2f2f2; --text-color:#333; --card-bg:#fff; --card-shadow: rgba(0,0,0,0.05);
+  --main-title-bg: rgba(59,130,246,0.1); --sub-title-bg: rgba(16,185,129,0.1); --footer-bg:#fff;
+}
+body { background: var(--bg-color); color:var(--text-color); padding:20px; font-family:'Roboto',sans-serif; transition:0.3s;}
+.header-container{text-align:center;margin-bottom:20px;}
+.main-title{display:inline-block;font-size:2.5rem;font-weight:700;color:#1F2937;letter-spacing:2px;padding:10px 25px;border-radius:12px;background:var(--main-title-bg);box-shadow:2px 2px 8px rgba(0,0,0,0.1);margin:0;}
+.sub-title{display:inline-block;font-size:2.0rem;font-weight:600;color:#2293329;letter-spacing:1px;padding:8px 20px;border-radius:10px;background:var(--sub-title-bg);box-shadow:1px 1px 6px rgba(0,0,0,0.1);margin:10px 0 0 0;}
+.cards{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;margin-bottom:30px;}
+.card{background:var(--card-bg);border-radius:15px;box-shadow:5px 5px 15px var(--card-shadow),-5px -5px 15px rgba(255,255,255,0.8);flex:1 1 180px;min-width:180px;max-width:220px;padding:25px;text-align:center;transition:transform 0.2s,box-shadow 0.2s,background 0.3s;cursor:pointer;}
+.card:hover{transform:translateY(-5px);box-shadow:10px 10px 20px rgba(0,0,0,0.1),-10px -10px 20px rgba(255,255,255,0.9);}
+.card h3{font-size:1rem;color:#555;margin-bottom:10px;letter-spacing:0.5px;transition:color 0.3s;}
+.card p{font-size:2rem;font-weight:700;color:#222;transition:color 0.3s;}
+canvas{background:var(--card-bg);border-radius:15px;padding:15px;box-shadow:5px 5px 15px var(--card-shadow),-5px -5px 15px rgba(255,255,255,0.8);transition:background 0.3s;}
+.footer{margin-top:30px;padding:16px 10px;text-align:center;font-size:0.9rem;color:#666;background:var(--footer-bg);border-radius:12px;box-shadow:5px 5px 15px var(--card-shadow),-5px -5px 15px rgba(255,255,255,0.8);transition:background 0.3s,color 0.3s;}
+.footer span{font-weight:700;color:#111;}
+body.dark-mode{--bg-color:#1E1E2F;--text-color:#f5f5f5;--card-bg:#2A2A3B;--card-shadow:rgba(0,0,0,0.5);--main-title-bg:rgba(59,130,246,0.2);--sub-title-bg:rgba(16,185,129,0.2);--footer-bg:#2A2A3B;}
+body.dark-mode .card h3,body.dark-mode .card p,body.dark-mode .footer,body.dark-mode .main-title,body.dark-mode .sub-title{color:#f5f5f5;}
+.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,0.6);}
+.modal-content{background-color:var(--card-bg);margin:10% auto;padding:20px;border-radius:15px;width:300px;text-align:left;color:var(--text-color);}
+.modal table{width:100%;border-collapse:collapse;}
+.modal table td{padding:8px;border-bottom:1px solid #ccc;}
+.close-btn{float:right;font-size:22px;font-weight:bold;cursor:pointer;}
+@media(max-width:600px){.cards{flex-direction:column;align-items:center;}canvas{width:100% !important;}}
+</style>
 </head>
 <body>
+<div class="header-container">
+  <h1 class="main-title">Supar Star Electrical Accessories Ltd</h1>
+  <h2 class="sub-title">🌞 Solar Power Generation Dashboard 🌞</h2>
+</div>
 
-<h1>🌞 Solar Power Dashboard</h1>
+<div style="text-align:center;margin-bottom:20px;">
+  <button id="mode-toggle" style="padding:10px 20px;border:none;border-radius:8px;background:#0D9488;color:white;cursor:pointer;font-weight:600;">🌙 Dark Mode</button>
+</div>
 
-<div class="box">Voltage<br><span class="value" id="v">--</span> V</div>
-<div class="box">Current<br><span class="value" id="i">--</span> A</div>
-<div class="box">Power<br><span class="value" id="p">--</span> kW</div>
-<div class="box">Energy<br><span class="value" id="e">--</span> MWh</div>
+<div class="cards">
+  <div class="card" id="voltageCard"><h3>avg Voltage (V)</h3><p id="voltage">0</p></div>
+  <div class="card" id="currentCard"><h3>avg Current (A)</h3><p id="current">0</p></div>
+  <div class="card"><h3>Power (kW)</h3><p id="power">0</p></div>
+  <div class="card"><h3>Energy (MWh)</h3><p id="energy">0</p></div>
+</div>
+
+<!-- Voltage Modal -->
+<div id="voltageModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" id="closeVoltageModal">&times;</span>
+    <h3>Voltage Details</h3>
+    <table>
+      <tr><td>L1-L2:</td><td id="v_l1l2">0</td></tr>
+      <tr><td>L2-L3:</td><td id="v_l2l3">0</td></tr>
+      <tr><td>L3-L1:</td><td id="v_l3l1">0</td></tr>
+      <tr><td>L1-N :</td><td id="v_l1n">0</td></tr>
+      <tr><td>L2-N :</td><td id="v_l2n">0</td></tr>
+      <tr><td>L3-N :</td><td id="v_l3n">0</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Current Modal -->
+<div id="currentModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" id="closeCurrentModal">&times;</span>
+    <h3>Current Details</h3>
+    <table>
+      <tr><td>I1:</td><td id="i1">0</td></tr>
+      <tr><td>I2:</td><td id="i2">0</td></tr>
+      <tr><td>I3:</td><td id="i3">0</td></tr>
+      <tr><td>In:</td><td id="in">0</td></tr>
+    </table>
+  </div>
+</div>
+
+<canvas id="chart" width="600" height="300"></canvas>
+
+<div class="footer">
+  © 2026 <span>SSEAL-Maintenance-BarfhE</span>. All Rights Reserved.
+</div>
 
 <script>
-const URL = "https://solar-power-generation-652f1-default-rtdb.firebaseio.com/live.json";
+const data={labels:[],datasets:[
+{label:'Voltage (V)',data:[],borderColor:'#FF4C4C',backgroundColor:'rgba(255,76,76,0.1)',fill:true,tension:0.3},
+{label:'Current (A)',data:[],borderColor:'#4C6EFF',backgroundColor:'rgba(76,110,255,0.1)',fill:true,tension:0.3},
+{label:'Power (kW)',data:[],borderColor:'#28C76F',backgroundColor:'rgba(40,199,111,0.1)',fill:true,tension:0.3},
+{label:'Energy (MWh)',data:[],borderColor:'#FF9F43',backgroundColor:'rgba(255,159,67,0.1)',fill:true,tension:0.3}
+]};
+const ctx=document.getElementById('chart').getContext('2d');
+function createChart(dark=false){return new Chart(ctx,{type:'line',data:data,options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{font:{size:14},color:dark?'#fff':'#111'}}},scales:{x:{title:{display:true,text:'Time',font:{size:14,color:dark?'#fff':'#111'}},ticks:{color:dark?'#fff':'#111'}},y:{beginAtZero:true,title:{display:true,text:'Values',font:{size:14,color:dark?'#fff':'#111'}},ticks:{color:dark?'#fff':'#111'}}}}});}
+let darkMode=document.body.classList.contains('dark-mode');
+let chart=createChart(darkMode);
+document.getElementById('mode-toggle').addEventListener('click',()=>{document.body.classList.toggle('dark-mode');darkMode=document.body.classList.contains('dark-mode');chart.destroy();chart=createChart(darkMode);document.getElementById('mode-toggle').innerText=darkMode?'☀️ Light Mode':'🌙 Dark Mode';});
 
-function loadData(){
-  fetch(URL)
-    .then(r => r.json())
-    .then(d => {
-      v.innerHTML = d.voltage ?? "--";
-      i.innerHTML = d.current ?? "--";
-      p.innerHTML = d.power_kw ?? "--";
-      e.innerHTML = d.energy_mwh ?? "--";
-    });
-}
-loadData();
-setInterval(loadData, 2000);
+const socket=new WebSocket('ws://'+window.location.hostname+'/ws');
+socket.onmessage=function(event){
+  const obj=JSON.parse(event.data);
+  const t=new Date().toLocaleTimeString();
+  
+  // Update Main Cards
+  document.getElementById('voltage').innerText=obj.voltage?.toFixed(2) ?? "--";
+  document.getElementById('current').innerText=obj.current?.toFixed(2) ?? "--";
+  document.getElementById('power').innerText=obj.power?.toFixed(3) ?? "--";
+  document.getElementById('energy').innerText=obj.energy?.toFixed(4) ?? "--";
+
+  data.labels.push(t);
+  data.datasets[0].data.push(obj.voltage);
+  data.datasets[1].data.push(obj.current);
+  data.datasets[2].data.push(obj.power);
+  data.datasets[3].data.push(obj.energy);
+  if(data.labels.length>25){data.labels.shift();data.datasets.forEach(ds=>ds.data.shift());}
+  chart.update();
+
+  // Update Voltage Modal (PM5300 Registers)
+  document.getElementById('v_l1l2').innerText=obj.v_l1l2?.toFixed(2) ?? "--";
+  document.getElementById('v_l2l3').innerText=obj.v_l2l3?.toFixed(2) ?? "--";
+  document.getElementById('v_l3l1').innerText=obj.v_l3l1?.toFixed(2) ?? "--";
+  document.getElementById('v_l1n').innerText=obj.v_l1n?.toFixed(2) ?? "--";
+  document.getElementById('v_l2n').innerText=obj.v_l2n?.toFixed(2) ?? "--";
+  document.getElementById('v_l3n').innerText=obj.v_l3n?.toFixed(2) ?? "--";
+
+  // Update Current Modal (PM5300 Registers)
+  document.getElementById('i1').innerText=obj.i1?.toFixed(2) ?? "--";
+  document.getElementById('i2').innerText=obj.i2?.toFixed(2) ?? "--";
+  document.getElementById('i3').innerText=obj.i3?.toFixed(2) ?? "--";
+  document.getElementById('in').innerText=obj.in?.toFixed(2) ?? "--";
+};
+
+// Modal Logic
+const voltageCard=document.getElementById('voltageCard');
+const voltageModal=document.getElementById('voltageModal');
+const closeVoltage=document.getElementById('closeVoltageModal');
+voltageCard.onclick=()=>{voltageModal.style.display='block';}
+closeVoltage.onclick=()=>{voltageModal.style.display='none';}
+window.onclick=function(e){if(e.target==voltageModal){voltageModal.style.display='none';}}
+
+const currentCard=document.getElementById('currentCard');
+const currentModal=document.getElementById('currentModal');
+const closeCurrent=document.getElementById('closeCurrentModal');
+currentCard.onclick=()=>{currentModal.style.display='block';}
+closeCurrent.onclick=()=>{currentModal.style.display='none';}
+window.onclick=function(e){if(e.target==currentModal){currentModal.style.display='none';}}
 </script>
-
 </body>
 </html>
