@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SSG Solar Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background:#0f172a; color:white; font-family:Arial; text-align:center; }
+    h1 { color:#22c55e; }
+    .box { background:#1e293b; margin:10px; padding:15px; border-radius:10px; }
+    .value { font-size:28px; color:#38bdf8; }
+  </style>
+</head>
+<body>
+
+<h1>🌞 Solar Power Dashboard</h1>
+
+<div class="box">Voltage<br><span class="value" id="v">--</span> V</div>
+<div class="box">Current<br><span class="value" id="i">--</span> A</div>
+<div class="box">Power<br><span class="value" id="p">--</span> kW</div>
+<div class="box">Energy<br><span class="value" id="e">--</span> MWh</div>
+
+<script>
+const URL = "https://solar-power-generation-652f1-default-rtdb.firebaseio.com/live.json";
+
+function loadData(){
+  fetch(URL)
+    .then(r => r.json())
+    .then(d => {
+      v.innerHTML = d.voltage ?? "--";
+      i.innerHTML = d.current ?? "--";
+      p.innerHTML = d.power_kw ?? "--";
+      e.innerHTML = d.energy_mwh ?? "--";
+    });
+}
+loadData();
+setInterval(loadData, 2000);
+</script>
+
+</body>
+</html>
